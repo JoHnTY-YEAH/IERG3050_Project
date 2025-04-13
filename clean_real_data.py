@@ -4,7 +4,7 @@ import os
 
 def clean_real_data(input_file='student-por.csv'):
     """
-    Clean and preprocess the UCI Student Performance dataset.
+    Clean and preprocess the UCI Student Performance dataset with data quality checks.
     
     Args:
         input_file (str): Path to input CSV file (default: 'student-por.csv').
@@ -40,7 +40,21 @@ def clean_real_data(input_file='student-por.csv'):
     data['study_hours'] = data['studytime'] * 2.5
     max_absences = data['absences'].max()
     data['attendance'] = 100 - (data['absences'] / max(1, max_absences)) * 100
-    data['sleep_hours'] = np.random.uniform(6, 8, len(data))
+    # Use normal distribution for sleep_hours, centered at 7 hours
+    data['sleep_hours'] = np.clip(np.random.normal(loc=7, scale=1, size=len(data)), 4, 10)
+    
+    # Data quality checks: Outlier detection using IQR
+    for feature in ['study_hours', 'attendance']:
+        Q1 = data[feature].quantile(0.25)
+        Q3 = data[feature].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        outliers = data[(data[feature] < lower_bound) | (data[feature] > upper_bound)]
+        if not outliers.empty:
+            print(f"Warning: {len(outliers)} outliers detected in {feature}.")
+            # Optionally remove outliers (uncomment to enable)
+            # data = data[(data[feature] >= lower_bound) & (data[feature] <= upper_bound)]
     
     # Final features
     cleaned_data = data[['study_hours', 'sleep_hours', 'attendance', 'pass_fail', 'grade_class']]

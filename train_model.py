@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier  # Added for decision tree
 import statsmodels.api as sm
 import pickle
 import os
@@ -138,11 +139,9 @@ def train_bayesian_model(X_train, y_train):
 def train_deep_learning_model(X_train, y_train):
     """
     Train a neural network for binary classification.
-
     Args:
         X_train: Scaled training features.
         y_train: Binary training labels.
-
     Returns:
         model: Trained Keras model, or None if error.
     """
@@ -167,7 +166,7 @@ def train_deep_learning_model(X_train, y_train):
 
 def train_models(X_train, y_train, multi_class=False, bayesian=False, deep_learning=False):
     """
-    Train logistic regression models, including Bayesian and deep learning.
+    Train logistic regression models, decision tree, including Bayesian and deep learning.
     
     Args:
         X_train: Scaled training features.
@@ -186,7 +185,13 @@ def train_models(X_train, y_train, multi_class=False, bayesian=False, deep_learn
     reg_model = GridSearchCV(LogisticRegression(penalty='l2', solver='lbfgs', random_state=42, max_iter=1000),
                              param_grid, cv=5, scoring='accuracy')
     reg_model.fit(X_train, y_train)
-    print(f"Best C for regularized model: {reg_model.best_params_['C']}")
+    print(f"Best C for regularized model (L2): {reg_model.best_params_['C']}")
+    
+    # L1 regularized model with increased max_iter and adjusted tol
+    l1_model = GridSearchCV(LogisticRegression(penalty='l1', solver='saga', random_state=42, max_iter=5000, tol=1e-3),
+                        param_grid, cv=5, scoring='accuracy')
+    l1_model.fit(X_train, y_train)
+    print(f"Best C for L1 regularized model: {l1_model.best_params_['C']}")
     
     balanced_model = LogisticRegression(class_weight='balanced', random_state=42, max_iter=1000)
     balanced_model.fit(X_train, y_train)
@@ -200,6 +205,10 @@ def train_models(X_train, y_train, multi_class=False, bayesian=False, deep_learn
     X_train_poly = poly.fit_transform(X_train)
     poly_model = LogisticRegression(random_state=42, max_iter=1000)
     poly_model.fit(X_train_poly, y_train)
+    
+    # Decision tree model
+    dt_model = DecisionTreeClassifier(max_depth=5, random_state=42)
+    dt_model.fit(X_train, y_train)
     
     glm_result = None
     if not multi_class:
@@ -217,8 +226,8 @@ def train_models(X_train, y_train, multi_class=False, bayesian=False, deep_learn
     if deep_learning and not multi_class:
         dl_model = train_deep_learning_model(X_train, y_train)
     
-    return (basic_model, reg_model.best_estimator_, balanced_model, smote_model,
-            poly_model, poly, glm_result, bayesian_trace, dl_model)
+    return (basic_model, reg_model.best_estimator_, l1_model.best_estimator_, balanced_model, smote_model,
+            poly_model, poly, dt_model, glm_result, bayesian_trace, dl_model)
 
 def main():
     """Load data, train models, and save outputs."""
@@ -237,29 +246,31 @@ def main():
         sim_data, "Simulated Multi-Class", multi_class=True)
     
     print("\nTraining models for simulated data (binary)...")
-    (basic_model_sim, reg_model_sim, balanced_model_sim, smote_model_sim,
-     poly_model_sim, poly_sim, glm_sim, bayesian_sim, dl_sim) = train_models(
+    (basic_model_sim, reg_model_sim, l1_model_sim, balanced_model_sim, smote_model_sim,
+     poly_model_sim, poly_sim, dt_model_sim, glm_sim, bayesian_sim, dl_sim) = train_models(
         X_sim_train, y_sim_train, bayesian=PYMC_AVAILABLE)
     
     print("\nTraining models for real data (binary)...")
-    (basic_model_real, reg_model_real, balanced_model_real, smote_model_real,
-     poly_model_real, poly_real, glm_real, bayesian_real, dl_real) = train_models(
+    (basic_model_real, reg_model_real, l1_model_real, balanced_model_real, smote_model_real,
+     poly_model_real, poly_real, dt_model_real, glm_real, bayesian_real, dl_real) = train_models(
         X_real_train, y_real_train, deep_learning=TF_AVAILABLE)
     
     print("\nTraining models for simulated data (multi-class)...")
-    (basic_model_sim_multi, reg_model_sim_multi, balanced_model_sim_multi,
-     smote_model_sim_multi, poly_model_sim_multi, poly_sim_multi, _, _, _) = train_models(
+    (basic_model_sim_multi, reg_model_sim_multi, l1_model_sim_multi, balanced_model_sim_multi,
+     smote_model_sim_multi, poly_model_sim_multi, poly_sim_multi, dt_model_sim_multi, _, _, _) = train_models(
         X_sim_multi_train, y_sim_multi_train, multi_class=True)
     
     os.makedirs('outputs', exist_ok=True)
     output_files = [
         ('basic_model_sim.pkl', basic_model_sim),
         ('reg_model_sim.pkl', reg_model_sim),
+        ('l1_model_sim.pkl', l1_model_sim),  # Added
         ('balanced_model_sim.pkl', balanced_model_sim),
         ('smote_model_sim.pkl', smote_model_sim),
         ('poly_model_sim.pkl', poly_model_sim),
         ('basic_model_real.pkl', basic_model_real),
         ('reg_model_real.pkl', reg_model_real),
+        ('l1_model_real.pkl', l1_model_real),  # Added
         ('balanced_model_real.pkl', balanced_model_real),
         ('smote_model_real.pkl', smote_model_real),
         ('poly_model_real.pkl', poly_model_real),
@@ -271,10 +282,14 @@ def main():
         ('glm_real.pkl', glm_real),
         ('basic_model_sim_multi.pkl', basic_model_sim_multi),
         ('reg_model_sim_multi.pkl', reg_model_sim_multi),
+        ('l1_model_sim_multi.pkl', l1_model_sim_multi),  # Added
         ('balanced_model_sim_multi.pkl', balanced_model_sim_multi),
         ('smote_model_sim_multi.pkl', smote_model_sim_multi),
         ('poly_model_sim_multi.pkl', poly_model_sim_multi),
-        ('poly_sim_multi.pkl', poly_sim_multi)
+        ('poly_sim_multi.pkl', poly_sim_multi),
+        ('dt_model_sim.pkl', dt_model_sim),  # Added
+        ('dt_model_real.pkl', dt_model_real),  # Added
+        ('dt_model_sim_multi.pkl', dt_model_sim_multi),  # Added
     ]
     for fname, obj in output_files:
         if obj is not None:

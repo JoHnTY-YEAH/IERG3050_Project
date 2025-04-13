@@ -18,7 +18,8 @@ def simulate_student_data(n=1000, seed=42):
     
     # Generate features
     study_hours = np.random.uniform(0, 10, n)
-    sleep_hours = np.random.uniform(0, 10, n)
+    # Use normal distribution for sleep_hours, centered at 7 hours
+    sleep_hours = np.clip(np.random.normal(loc=7, scale=1, size=n), 4, 10)
     attendance = np.random.uniform(0, 100, n)
     
     # Logistic function coefficients
