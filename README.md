@@ -14,11 +14,11 @@ This project predicts student success (pass/fail) using logistic regression, com
 ## Setup
 1. Install dependencies: `pip3 install pandas numpy scikit-learn matplotlib seaborn`
 2. Download `student-por.csv` from the UCI Machine Learning Repository and place it in the project root.
-3. Run `simulate_data.py`: `python3 simulate_data.py`
-4. Run `clean_real_data.py`: `python3 clean_real_data.py`
-5. Run `train_model.py`: `python3 train_model.py`
-6. Run `evaluate_visualize.py`: `python3 evaluate_visualize.py`
-7. Run `main.py`: `python3 main.py`
+3. - Run `simulate_data.py`: `python3 simulate_data.py`
+   - Run `clean_real_data.py`: `python3 clean_real_data.py`
+   - Run `train_model.py`: `python3 train_model.py`
+   - Run `evaluate_visualize.py`: `python3 evaluate_visualize.py`
+   - Run `main.py`: `python3 main.py`
 
 ## Outputs
 - **Data**: `simulated_student_data.csv`, `cleaned_real_data.csv`
