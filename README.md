@@ -86,7 +86,6 @@ This project develops and evaluates machine learning models to predict student p
 - Feature importance: `feature_importance_sim.png`.
 - Bayesian posterior: `bayesian_posterior.png`.
 
-## Scikit-Learn Warning
+## Scikit-Learn Warning (Safe to ignore)
    ```bash
    FutureWarning: `BaseEstimator._validate_data` is deprecated...
-- Safe to ignore. Fixed by pinning scikit-learn==1.5.2.
