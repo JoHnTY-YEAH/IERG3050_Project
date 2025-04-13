@@ -87,6 +87,6 @@ This project develops and evaluates machine learning models to predict student p
 - Bayesian posterior: `bayesian_posterior.png`.
 
 ## Scikit-Learn Warning
-    ```bash
-    FutureWarning: `BaseEstimator._validate_data` is deprecated...
+   ```bash
+   FutureWarning: `BaseEstimator._validate_data` is deprecated...
 - Safe to ignore. Fixed by pinning scikit-learn==1.5.2.
