@@ -3,10 +3,20 @@ import pandas as pd
 import os
 
 def simulate_student_data(n=1000, seed=42):
+    """
+    Generate simulated student data with study_hours, sleep_hours, attendance, and pass_fail labels.
+    
+    Args:
+        n (int): Number of records to generate (default: 1000).
+        seed (int): Random seed for reproducibility (default: 42).
+    
+    Returns:
+        pd.DataFrame: Simulated data with features and labels.
+    """
     # Set random seed for reproducibility
     np.random.seed(seed)
     
-    # Generate 1,000 records
+    # Generate features
     study_hours = np.random.uniform(0, 10, n)
     sleep_hours = np.random.uniform(0, 10, n)
     attendance = np.random.uniform(0, 100, n)
@@ -37,19 +47,27 @@ def simulate_student_data(n=1000, seed=42):
     return sim_data
 
 def main():
+    """Simulate data and save to CSV."""
     # Simulate data
     sim_data = simulate_student_data()
     
     # Save to CSV
-    os.makedirs('outputs', exist_ok=True)  # Ensure outputs folder exists
-    sim_data.to_csv('outputs/simulated_student_data.csv', index=False)
-    print("Simulated data saved to 'outputs/simulated_student_data.csv'")
+    os.makedirs('outputs', exist_ok=True)
+    output_file = 'outputs/simulated_student_data.csv'
+    if os.path.exists(output_file):
+        print(f"Warning: Overwriting {output_file}")
+    sim_data.to_csv(output_file, index=False)
+    print(f"Simulated data saved to '{output_file}'")
     
     # Basic stats
     print("\nSimulated Data Summary:")
     print(sim_data.describe())
     print("\nPass/Fail Distribution:")
     print(sim_data['pass_fail'].value_counts())
+    # Imbalance ratio
+    counts = sim_data['pass_fail'].value_counts()
+    ratio = counts[1] / counts[0] if 0 in counts and counts[0] > 0 else float('inf')
+    print(f"Imbalance Ratio (Pass/Fail): {ratio:.3f}")
 
 if __name__ == "__main__":
     main()

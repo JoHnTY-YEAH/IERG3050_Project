@@ -1,0 +1,16 @@
+project/
+├── ierg3050_env
+├── /outputs
+├── clean_real_data.py
+├── evaluate_visualize.py
+├── interactive_demo.py
+├── main.py
+├── README.md
+├── requirements.txt
+├── simulate_data.py
+├── structure.txt
+├── student-mat.csv
+├── student-merge.R
+├── student-por.csv
+├── student.txt
+├── train_model.py
