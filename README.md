@@ -53,7 +53,7 @@ Follow these steps to set up the project in a clean environment.
 
 6. **Install Python Dependencies**:
    ```bash
-   pip install numpy pandas scikit-learn matplotlib plotly pymc arviz imblearn statsmodels tensorflow weasyprint
+   pip3 install numpy pandas scikit-learn matplotlib plotly pymc arviz imblearn statsmodels tensorflow weasyprint seaborn kaleido
    ```
 
 7. **Create Output Directories**:
