@@ -99,16 +99,6 @@ def prepare_data(data, dataset_name, multi_class=False):
     return X_train_scaled, X_test_scaled, y_train, y_test, scaler
 
 def train_bayesian_model(X_train, y_train):
-    """
-    Train Bayesian logistic regression with informative priors.
-    
-    Args:
-        X_train: Scaled training features.
-        y_train: Binary training labels.
-    
-    Returns:
-        trace: Posterior samples with posterior predictive, or None if error.
-    """
     if not PYMC_AVAILABLE:
         print("Bayesian model skipped: pymc or arviz not available.")
         return None
@@ -120,42 +110,36 @@ def train_bayesian_model(X_train, y_train):
             logits = intercept + pm.math.dot(X_train, beta)
             pm.Bernoulli('y', logit_p=logits, observed=y_train)
             trace = pm.sample(500, tune=500, target_accept=0.9, return_inferencedata=True)
+            
             print("Generating posterior predictive samples...")
             with model:
-                posterior_predictive = pm.sample_posterior_predictive(trace, var_names=["y"])
-            print("Integrating posterior predictive into trace...")
-            trace.extend(az.from_pymc(posterior_predictive=posterior_predictive))
-            print("Verifying posterior predictive group...")
-            if hasattr(trace, 'posterior_predictive'):
-                print("Posterior predictive group created successfully.")
-            else:
-                print("Warning: Posterior predictive group not found in trace.")
-        print("Bayesian model saved to 'outputs/bayesian_sim.nc'")
-        return trace
+                posterior_predictive = pm.sample_posterior_predictive(trace)
+            
+            # Add posterior predictive to trace
+            trace.posterior_predictive = posterior_predictive.posterior_predictive
+            
+            print("Saving Bayesian model trace...")
+            os.makedirs('outputs', exist_ok=True)
+            az.to_netcdf(trace, 'outputs/bayesian_sim.nc')
+            print("Bayesian model saved to 'outputs/bayesian_sim.nc'")
+            return trace
     except Exception as e:
-        print(f"Error in Bayesian model: {e}")
+        print(f"Error in Bayesian model: {str(e)}")
         return None
 
 def train_deep_learning_model(X_train, y_train):
-    """
-    Train a neural network for binary classification.
-    Args:
-        X_train: Scaled training features.
-        y_train: Binary training labels.
-    Returns:
-        model: Trained Keras model, or None if error.
-    """
     if not TF_AVAILABLE:
         print("Deep learning model skipped: tensorflow not available.")
         return None
     try:
         print("Training deep learning model for real data...")
         model = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(64, activation='relu', input_dim=X_train.shape[1]),
+            tf.keras.layers.Input(shape=(X_train.shape[1],)),
+            tf.keras.layers.Dense(64, activation='relu'),
             tf.keras.layers.Dense(32, activation='relu'),
             tf.keras.layers.Dense(1, activation='sigmoid')
         ])
-        optimizer = tf.keras.optimizers.legacy.Adam(learning_rate=0.001)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
         model.fit(X_train, y_train, epochs=50, batch_size=32, verbose=1, validation_split=0.2)
         print("Deep learning model saved to 'outputs/dl_real.keras'")

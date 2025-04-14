@@ -10,6 +10,7 @@ from sklearn.preprocessing import PolynomialFeatures
 import pickle
 import os
 from matplotlib.colors import ListedColormap
+import plotly.io as pio
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -148,13 +149,26 @@ def evaluate_model(model, X_test, y_test, model_name, metrics_list, deep_learnin
     
     if bayesian:
         # Bayesian model: Use posterior predictive samples
-        posterior = model.posterior_predictive["y"].mean(("chain", "draw"))
-        y_pred = (posterior > 0.5).astype(int).values.flatten()
-        y_prob = posterior.values.flatten() if posterior is not None else None
-        accuracy = accuracy_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred, average='weighted')
-        auc = roc_auc_score(y_test, y_prob) if y_prob is not None and len(np.unique(y_test)) == 2 else 'N/A'
-        cm = confusion_matrix(y_test, y_pred)
+        try:
+            if hasattr(model, 'posterior_predictive') and hasattr(model.posterior_predictive, 'y'):
+                posterior = model.posterior_predictive["y"].mean(("chain", "draw"))
+                y_pred = (posterior > 0.5).astype(int).values.flatten()
+                y_prob = posterior.values.flatten()
+            else:
+                print("Warning: No posterior predictive samples found. Using posterior mean for predictions.")
+                intercept = model.posterior['intercept'].mean().values
+                beta = model.posterior['beta'].mean(('chain', 'draw')).values
+                logits = intercept + np.dot(X_test_input, beta)
+                y_prob = 1 / (1 + np.exp(-logits))
+                y_pred = (y_prob > 0.5).astype(int)
+            
+            accuracy = accuracy_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred, average='weighted')
+            auc = roc_auc_score(y_test, y_prob) if len(np.unique(y_test)) == 2 else 'N/A'
+            cm = confusion_matrix(y_test, y_pred)
+        except Exception as e:
+            print(f"Error evaluating Bayesian model: {e}")
+            return metrics_list
     else:
         # Non-Bayesian models (scikit-learn or deep learning)
         if deep_learning:
@@ -283,6 +297,8 @@ def plot_decision_boundary(model, X, y, title, filename, poly=None):
     )
     os.makedirs('outputs', exist_ok=True)
     fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
+
 def plot_roc_curve(models, X_test, y_test, labels, title, filename, poly=None):
     """
     Plot ROC curves for multiple models (binary only) with Plotly.
@@ -329,6 +345,7 @@ def plot_roc_curve(models, X_test, y_test, labels, title, filename, poly=None):
     )
     os.makedirs('outputs', exist_ok=True)
     fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
 
 def plot_feature_importance(model, title, filename, is_decision_tree=False):
     """
@@ -351,6 +368,7 @@ def plot_feature_importance(model, title, filename, is_decision_tree=False):
                  labels={'Importance': 'Coefficient / Importance'}, color='Feature')
     os.makedirs('outputs', exist_ok=True)
     fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
 
 def plot_class_distribution(y_sim, y_real, y_sim_multi, filename):
     """
@@ -401,6 +419,8 @@ def plot_class_distribution(y_sim, y_real, y_sim_multi, filename):
     )
     os.makedirs('outputs', exist_ok=True)
     fig.write_html(f'outputs/{filename}')
+    fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
 
 def plot_real_scatter(data, filename):
     """
@@ -440,27 +460,36 @@ def plot_bayesian_posterior(trace, filename):
     Plot posterior distributions for Bayesian model with Plotly.
     
     Args:
-        trace: Posterior samples.
+        trace: Posterior samples (arviz.InferenceData).
         filename (str): Output file name.
     """
     if trace is None or not PYMC_AVAILABLE:
         print("No Bayesian posterior plot generated.")
         return
     fig = make_subplots(rows=2, cols=2,
-                        subplot_titles=['intercept', 'beta[0]', 'beta[1]', 'beta[2]'])
+                        subplot_titles=['intercept', 'beta_study_hours', 'beta_sleep_hours', 'beta_attendance'])
     
-    for i, var in enumerate(['intercept', 'beta[0]', 'beta[1]', 'beta[2]']):
+    # Plot intercept
+    values = trace.posterior['intercept'].values.flatten()
+    fig.add_trace(
+        go.Histogram(x=values, nbinsx=50, name='intercept', showlegend=False),
+        row=1, col=1
+    )
+    
+    # Plot beta coefficients
+    for i, name in enumerate(['study_hours', 'sleep_hours', 'attendance']):
+        values = trace.posterior['beta'].sel(beta_dim_0=i).values.flatten()
         row = (i // 2) + 1
         col = (i % 2) + 1
-        values = trace.posterior[var].values.flatten()
         fig.add_trace(
-            go.Histogram(x=values, nbinsx=50, name=var, showlegend=False),
+            go.Histogram(x=values, nbinsx=50, name=f'beta_{name}', showlegend=False),
             row=row, col=col
         )
     
     fig.update_layout(title='Bayesian Posterior Distributions', showlegend=False)
     os.makedirs('outputs', exist_ok=True)
     fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
 
 def plot_3d_feature_space(X, y):
     """
