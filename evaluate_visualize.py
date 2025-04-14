@@ -508,6 +508,105 @@ def plot_3d_feature_space(X, y):
     os.makedirs('outputs', exist_ok=True)
     fig.write_html('outputs/3d_feature_space.html')
 
+def plot_correlation_heatmap(sim_data, real_data, filename):
+    """
+    Plot correlation heatmaps for simulated and real data with Plotly.
+    
+    Args:
+        sim_data (pd.DataFrame): Simulated data.
+        real_data (pd.DataFrame): Real data.
+        filename (str): Output file name.
+    """
+    features = ['study_hours', 'sleep_hours', 'attendance']
+    fig = make_subplots(rows=1, cols=2,
+                        subplot_titles=['Simulated Data', 'Real Data'],
+                        shared_yaxes=True)
+    
+    # Simulated data heatmap
+    sim_corr = sim_data[features].corr()
+    fig.add_trace(
+        go.Heatmap(
+            z=sim_corr.values,
+            x=features,
+            y=features,
+            text=sim_corr.values.round(3),
+            texttemplate="%{text}",
+            colorscale='Viridis',
+            showscale=False
+        ),
+        row=1, col=1
+    )
+    
+    # Real data heatmap
+    real_corr = real_data[features].corr()
+    fig.add_trace(
+        go.Heatmap(
+            z=real_corr.values,
+            x=features,
+            y=features,
+            text=real_corr.values.round(3),
+            texttemplate="%{text}",
+            colorscale='Viridis',
+            showscale=True
+        ),
+        row=1, col=2
+    )
+    
+    fig.update_layout(
+        title='Feature Correlations',
+        showlegend=False
+    )
+    os.makedirs('outputs', exist_ok=True)
+    fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
+
+def plot_sigmoid_function(filename):
+    """
+    Plot the sigmoid function for theoretical explanation with Plotly.
+    
+    Args:
+        filename (str): Output file name.
+    """
+    x = np.linspace(-6, 6, 100)
+    y = 1 / (1 + np.exp(-x))
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=x,
+            y=y,
+            mode='lines',
+            name='Sigmoid Function',
+            line=dict(color='blue')
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[0, 0],
+            y=[0, 1],
+            mode='lines',
+            line=dict(color='black', dash='dash'),
+            showlegend=False
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[-6, 6],
+            y=[0.5, 0.5],
+            mode='lines',
+            line=dict(color='black', dash='dash'),
+            showlegend=False
+        )
+    )
+    fig.update_layout(
+        title='Sigmoid Function',
+        xaxis_title='z',
+        yaxis_title='σ(z)',
+        showlegend=True
+    )
+    os.makedirs('outputs', exist_ok=True)
+    fig.write_html(f'outputs/{filename}')
+    fig.write_image(f'outputs/{filename.replace(".html", ".png")}', width=800, height=600)
+
 def main():
     """Evaluate models and generate visualizations."""
     data = load_models_and_data()
@@ -524,7 +623,7 @@ def main():
     
     metrics_list = []
     
-    # Evaluate binary models (simulated)
+    # [Existing model evaluations unchanged]
     evaluate_model(basic_model_sim, X_sim_test, y_sim_test, "Simulated Basic", metrics_list)
     evaluate_model(reg_model_sim, X_sim_test, y_sim_test, "Simulated Regularized (L2)", metrics_list)
     evaluate_model(l1_model_sim, X_sim_test, y_sim_test, "Simulated L1 Regularized", metrics_list)
@@ -533,13 +632,11 @@ def main():
     evaluate_model(poly_model_sim, X_sim_test, y_sim_test, "Simulated Polynomial", metrics_list, poly=poly_sim)
     evaluate_model(dt_model_sim, X_sim_test, y_sim_test, "Simulated Decision Tree", metrics_list)
     
-    # Evaluate Bayesian and deep learning (if available)
     if bayesian_sim is not None:
         evaluate_model(bayesian_sim, X_sim_test, y_sim_test, "Simulated Bayesian", metrics_list, bayesian=True)
     if dl_real is not None:
         evaluate_model(dl_real, X_real_test, y_real_test, "Real Deep Learning", metrics_list, deep_learning=True)
     
-    # Evaluate binary models (real)
     evaluate_model(basic_model_real, X_real_test, y_real_test, "Real Basic", metrics_list)
     evaluate_model(reg_model_real, X_real_test, y_real_test, "Real Regularized (L2)", metrics_list)
     evaluate_model(l1_model_real, X_real_test, y_real_test, "Real L1 Regularized", metrics_list)
@@ -548,7 +645,6 @@ def main():
     evaluate_model(poly_model_real, X_real_test, y_real_test, "Real Polynomial", metrics_list, poly=poly_real)
     evaluate_model(dt_model_real, X_real_test, y_real_test, "Real Decision Tree", metrics_list)
     
-    # Evaluate multi-class models
     evaluate_model(basic_model_sim_multi, X_sim_multi_test, y_sim_multi_test,
                    "Simulated Multi-Class Basic", metrics_list)
     evaluate_model(reg_model_sim_multi, X_sim_multi_test, y_sim_multi_test,
@@ -571,7 +667,7 @@ def main():
     metrics_df.to_csv(output_file, index=False)
     print(f"\nMetrics saved to '{output_file}'")
     
-    # Decision boundaries
+    # [Existing visualizations unchanged]
     model_2d = LogisticRegression(max_iter=1000).fit(X_sim_test[:, [0, 2]], y_sim_test)
     plot_decision_boundary(model_2d, X_sim_test, y_sim_test,
                           'Decision Boundary (Simulated Binary)',
@@ -583,7 +679,6 @@ def main():
                           'Decision Boundary (Simulated Multi-Class)',
                           'decision_boundary_multi.html')
     
-    # ROC curves
     plot_roc_curve([basic_model_sim, reg_model_sim, l1_model_sim, balanced_model_sim, smote_model_sim, poly_model_sim, dt_model_sim],
                    X_sim_test, y_sim_test,
                    ['Basic', 'Regularized (L2)', 'L1 Regularized', 'Balanced', 'SMOTE', 'Polynomial', 'Decision Tree'],
@@ -595,7 +690,6 @@ def main():
                    'ROC Curve (Real Binary)',
                    'roc_curve_real.html', poly=poly_real)
     
-    # Feature importance
     plot_feature_importance(reg_model_sim,
                            'Feature Importance (Simulated Regularized L2)',
                            'feature_importance_sim.html')
@@ -624,7 +718,6 @@ def main():
                            'Feature Importance (Simulated Multi-Class Decision Tree)',
                            'feature_importance_sim_multi_dt.html', is_decision_tree=True)
     
-    # Other visualizations
     plot_class_distribution(y_sim_test, y_real_test, y_sim_multi_test, 'class_distribution.html')
     plot_real_scatter(real_data, 'real_scatter.html')
     plot_multi_class_cm(y_sim_multi_test, poly_model_sim_multi.predict(poly_sim_multi.transform(X_sim_multi_test)),
@@ -632,6 +725,11 @@ def main():
                         'multi_class_cm.html')
     plot_bayesian_posterior(bayesian_sim, 'bayesian_posterior.html')
     plot_3d_feature_space(X_real_test, y_real_test)
+    
+    # New visualizations
+    sim_data = pd.read_csv('outputs/simulated_student_data.csv')
+    plot_correlation_heatmap(sim_data, real_data, 'correlation_heatmap.html')
+    plot_sigmoid_function('sigmoid_function.html')
     
     print("\nVisualizations saved to 'outputs/' as HTML files")
 
